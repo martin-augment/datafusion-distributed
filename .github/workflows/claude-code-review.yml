@@ -33,6 +33,7 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
+        continue-on-error: true 
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -55,3 +56,20 @@ jobs:
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
           claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
           
+      - name: Verify file exists
+        id: check_file
+        if: always()
+        run: |
+          FILE_PATH=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$FILE_PATH" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload artifact
+        if: always() && steps.check_file.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-execution-output.json
+          path: /home/runner/work/_temp/claude-execution-output.json
